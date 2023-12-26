@@ -4,26 +4,51 @@
 #include <QWidget>
 #include <QEvent>
 #pragma comment(lib,"Ws2_32.lib")
-
+Q_DECLARE_METATYPE(CPackge)
 namespace Ui {
 class ChatClient;
 }
-
+class DataEventPrivaet :public QEvent
+{
+public:
+    static const QEvent::Type type = static_cast<QEvent::Type>(QEvent::User + 3);
+    explicit DataEventPrivaet(CPackge pck)
+        :QEvent(type), m_data(pck)
+    {
+    }
+    QString data()
+    {
+        return QString::fromUtf8(m_data.m_ci.m_szName);
+    }
+    CPackge getEventPck()
+    {
+        return m_data;
+    }
+    QString getmsg()
+    {
+        return QString::fromUtf8(m_data.m_szMsg);
+    }
+private:
+    CPackge m_data;
+};
 class DataEvent :public QEvent
 {
 public:
     static const QEvent::Type type= static_cast<QEvent::Type>(QEvent::User+1);
-    explicit DataEvent(char* data)
-        :QEvent(type)
+    explicit DataEvent(CPackge pck)
+        :QEvent(type),m_data(pck)
     {
-        m_data = QString::fromUtf8(data);
     }
     QString data()
+    {
+       return QString::fromUtf8(m_data.m_ci.m_szName);
+    }
+    CPackge getEventPck()
     {
         return m_data;
     }
 private:
-    QString m_data;
+    CPackge m_data;
 };
 
 /*群发消息事件*/
@@ -70,6 +95,7 @@ private:
     void online();//上线
     void onpublic();//群聊
     void onprivate();//私聊
+    void onoffline();//下线
 
 private:
    static DWORD WINAPI WorkRecvThreadProc(LPVOID IpParameter);//由于获取数据会阻塞线程，所以这里使用开个新线程去获取服务端数据

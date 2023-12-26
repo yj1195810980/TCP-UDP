@@ -3,6 +3,7 @@
 #include <iostream>
 #include <QPushButton>
 #include <QMessageBox>
+#include <QVariant>
 #include <QtGlobal>
 #include <QTextStream>
 #include "../common/CSockinit.h"
@@ -53,6 +54,7 @@ ChatClient::ChatClient(QWidget* parent) :
 	connect(ui->pushButton, &QPushButton::clicked, this, &ChatClient::online);
 	connect(ui->pushButton_3, &QPushButton::clicked, this, &ChatClient::onpublic);
 	connect(ui->pushButton_4, &QPushButton::clicked, this, &ChatClient::onprivate);
+	connect(ui->pushButton_2, &QPushButton::clicked, this, &ChatClient::onoffline);
 }
 
 ChatClient::~ChatClient()
@@ -83,7 +85,7 @@ DWORD WINAPI ChatClient::WorkRecvThreadProc(LPVOID obj)
 			case PT_ONLINE:
 			{
 				auto th = (ChatClient*)obj;
-				DataEvent* event = new DataEvent(pack.m_ci.m_szName);
+				DataEvent* event = new DataEvent(pack);
 				QApplication::postEvent(th, event);
 				break;
 			}
@@ -97,7 +99,12 @@ DWORD WINAPI ChatClient::WorkRecvThreadProc(LPVOID obj)
 				break;
 			}
 			case PT_PRIVATE:
+			{
+				auto th = (ChatClient*)obj;
+				DataEventPrivaet* event = new DataEventPrivaet(pack);
+				QApplication::postEvent(th, event);
 				break;
+			}
 			default:
 				break;
 			}
@@ -152,7 +159,11 @@ void ChatClient::customEvent(QEvent* event)
 		/*上线消息*/
 		DataEvent* dataEvent = static_cast<DataEvent*>(event);
 		QString temp = dataEvent->data();
-		ui->listWidget->addItem(temp);
+		QListWidgetItem* item = new QListWidgetItem(temp, ui->listWidget);
+		auto pck = dataEvent->getEventPck();
+		QVariant variant;
+		variant.setValue(pck);
+		item->setData(Qt::UserRole, variant);/*将数据存储在item中*/
 		break;
 	}
 	case DataEventPublic::type:
@@ -165,35 +176,54 @@ void ChatClient::customEvent(QEvent* event)
 		QString formattedString = QString(u8"名称：%1，内容：%2").arg(data).arg(name);
 		ui->textBrowser->append(formattedString);
 	}
-
+	case DataEventPrivaet::type:
+	{
+		/*私聊消息*/
+		DataEventPrivaet* dataEvent = static_cast<DataEventPrivaet*>(event);
+		QString str;
+		QString formattedString = QString(u8"名称：%1，内容：%2").arg(dataEvent->getEventPck().m_ci.m_szName).arg(dataEvent->getmsg());
+		ui->textBrowser->append(formattedString);
+	}
 	default:
 		break;
 	}
-
 
 }
 
 
 void ChatClient::onprivate()
 {
+	if (ui->lineEdit_2->text().isEmpty())
+	{
+		QMessageBox::warning(nullptr, u8"警告", u8"输入消息不能为空");
+		return;
+	}
 	auto curritem=ui->listWidget->currentItem();
 	if (curritem)
 	{
-		auto ms=curritem->text();
-		CPackge pgk(PT_PRIVATE, m_in, "");
+		QVariant stredData= curritem->data(Qt::UserRole);/*获取用户自定义的数据*/
+		if (stredData.isValid())
+		{
+			auto pck = stredData.value<CPackge>();
+			QString msgData = ui->lineEdit_2->text();
+			auto ms = curritem->text();
+			CPackge pgk(PT_PRIVATE, m_in, pck.m_ci,"");
 
-		memset(pgk.m_szMsg, 0, sizeof(pgk.m_szMsg));
-
-		int copyLength = qMin(ms.toUtf8().size(), static_cast<int>(sizeof(pgk.m_szMsg)) - 1);
-		strncpy(pgk.m_szMsg, ms.toUtf8().constData(), copyLength);
-	
-		::sendto(m_sockClient, (char*)&pgk, sizeof(pgk), 0, (sockaddr*)&m_siServer, sizeof(m_siServer));
+			memset(pgk.m_szMsg, 0, sizeof(pgk.m_szMsg));
+			int copyLength = qMin(msgData.toUtf8().size(), static_cast<int>(sizeof(pgk.m_szMsg)) - 1);
+			strncpy(pgk.m_szMsg, msgData.toUtf8().constData(), copyLength);
+			::sendto(m_sockClient, (char*)&pgk, sizeof(pgk), 0, (sockaddr*)&m_siServer, sizeof(m_siServer));
+		}
 	}
 	else
 	{
 		QMessageBox::warning(nullptr, u8"警告", u8"未选中私聊对象");
 	}
+}
 
-	
-
+void ChatClient::onoffline()
+{
+	/*下线*/
+	CPackge pgk(PT_PRIVATE, m_in,"");
+	::sendto(m_sockClient, (char*)&pgk, sizeof(pgk), 0, (sockaddr*)&m_siServer, sizeof(m_siServer));
 }

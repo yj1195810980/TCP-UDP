@@ -120,8 +120,24 @@ void OnLine(SOCKET sock, CPackge& pkg)
 	
 }
 
+
+
 void OffLine(SOCKET sock, CPackge& pkg)
 {
+	printf("[log]:%s %d %s offline\r\n", inet_ntoa(pkg.m_ci.m_si.sin_addr),
+											pkg.m_ci.m_si.sin_port,
+											pkg.m_ci.m_szName);
+	
+	for (auto i : g_lstCIs)
+	{
+		if (i.m_si==pkg.m_ci.m_si)
+		{
+			
+		}
+
+
+	}
+
 	////下线
 	//printf("[log]:%s %d %s offline\r\n", inet_ntoa(pkg.m_ci.m_si.sin_addr),
 	//	pkg.m_ci.m_si.sin_port,
@@ -147,5 +163,5 @@ void OnPublic(SOCKET sock, CPackge& pkg)
 void OnPrivaet(SOCKET sock, CPackge& pkg)
 {
 	//私聊
-
+	sendto(sock, (char*)&pkg, sizeof(pkg), 0, (sockaddr*)&pkg.m_ciDst, sizeof(pkg.m_ciDst));
 }
