@@ -117,7 +117,6 @@ void OnLine(SOCKET sock, CPackge& pkg)
 		//发送给之前上线的客户端，现在有新上线了
 		sendto(sock, (char*)&pkgSend, sizeof(pkgSend), 0, (sockaddr*)&ci.m_si, sizeof(ci.m_si));
 	}
-
 }
 
 
