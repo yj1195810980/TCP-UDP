@@ -179,6 +179,7 @@ void ChatClient::customEvent(QEvent* event)
 		QString str;
 		QString formattedString = QString(u8"名称：%1，内容：%2").arg(data).arg(name);
 		ui->textBrowser->append(formattedString);
+		break;
 	}
 	case DataEventPrivaet::type:
 	{
@@ -187,6 +188,7 @@ void ChatClient::customEvent(QEvent* event)
 		QString str;
 		QString formattedString = QString(u8"名称：%1，内容：%2").arg(dataEvent->getEventPck().m_ci.m_szName).arg(dataEvent->getmsg());
 		ui->textBrowser->append(formattedString);
+		break;
 	}
 	case DataEventoffline::type:
 	{
@@ -210,6 +212,7 @@ void ChatClient::customEvent(QEvent* event)
 				}
 			}
 		}
+		break;
 	}
 	default:
 		break;
