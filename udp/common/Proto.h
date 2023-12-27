@@ -19,6 +19,24 @@ enum packageType
 /// </summary>
 struct ClientInfo
 {
+	bool operator==(const ClientInfo& obj)
+	{
+		if (m_si.sin_addr.S_un.S_addr!=obj.m_si.sin_addr.S_un.S_addr)
+		{
+			return false;
+		}
+		if (m_si.sin_port!=obj.m_si.sin_port)
+		{
+			return false;
+		}
+		if (strcmp(m_szName,obj.m_szName)!=0)
+		{
+			return false;
+		}
+		return true;
+	}
+
+
 	sockaddr_in m_si;//ip地址和端口号
 	char m_szName[NAMELEN];//名称
 };

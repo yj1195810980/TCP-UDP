@@ -6,6 +6,7 @@
 #include <QVariant>
 #include <QtGlobal>
 #include <QTextStream>
+#include<qdebug.h>
 #include "../common/CSockinit.h"
 ChatClient::ChatClient(QWidget* parent) :
 	QWidget(parent),
@@ -49,6 +50,7 @@ ChatClient::ChatClient(QWidget* parent) :
 	SECURITY_ATTRIBUTES se = {};
 	se.nLength = sizeof(se);
 	se.bInheritHandle = NULL;
+	m_oerwordthread = true;
 	m_hThread = ::CreateThread(&se, 0, WorkRecvThreadProc, (LPVOID)this, 0, NULL);
 
 	connect(ui->pushButton, &QPushButton::clicked, this, &ChatClient::online);
@@ -65,7 +67,8 @@ ChatClient::~ChatClient()
 
 DWORD WINAPI ChatClient::WorkRecvThreadProc(LPVOID obj)
 {
-	while (true)
+	auto th = (ChatClient*)obj;
+	while (th->m_oerwordthread)
 	{
 		sockaddr_in siFrom = {};
 		int nSizeofSi = sizeof(sockaddr_in);
@@ -84,23 +87,24 @@ DWORD WINAPI ChatClient::WorkRecvThreadProc(LPVOID obj)
 			{
 			case PT_ONLINE:
 			{
-				auto th = (ChatClient*)obj;
 				DataEvent* event = new DataEvent(pack);
 				QApplication::postEvent(th, event);
 				break;
 			}
 			case PT_OFFLINE:
+			{
+				DataEventoffline* event = new DataEventoffline(pack);
+				QApplication::postEvent(th, event);
 				break;
+			}
 			case PT_PUBLIC:
 			{
 				DataEventPublic* event = new DataEventPublic(pack.m_ci.m_szName,pack.m_szMsg);
-				auto th = (ChatClient*)obj;
 				QApplication::postEvent(th, event);
 				break;
 			}
 			case PT_PRIVATE:
 			{
-				auto th = (ChatClient*)obj;
 				DataEventPrivaet* event = new DataEventPrivaet(pack);
 				QApplication::postEvent(th, event);
 				break;
@@ -184,10 +188,32 @@ void ChatClient::customEvent(QEvent* event)
 		QString formattedString = QString(u8"名称：%1，内容：%2").arg(dataEvent->getEventPck().m_ci.m_szName).arg(dataEvent->getmsg());
 		ui->textBrowser->append(formattedString);
 	}
+	case DataEventoffline::type:
+	{
+		/*收到的其他客户端下线的消息*/
+		DataEventoffline* dataEvent = static_cast<DataEventoffline*>(event);
+		QString str;
+		QString formattedString = QString(u8"名称：%1，已下线").arg(dataEvent->getEventPck().m_ci.m_szName);
+		ui->textBrowser->append(formattedString);
+		
+		for (int i = 0; i < ui->listWidget->count(); i++)
+		{
+			QListWidgetItem* temp = ui->listWidget->item(i);
+			QVariant stredData = temp->data(Qt::UserRole);/*获取用户自定义的数据*/
+			if (stredData.isValid())
+			{
+				auto pck = stredData.value<CPackge>();
+				if (pck.m_ci == dataEvent->getEventPck().m_ci)
+				{
+					ui->listWidget->takeItem(i);
+					delete temp;
+				}
+			}
+		}
+	}
 	default:
 		break;
 	}
-
 }
 
 
@@ -224,6 +250,10 @@ void ChatClient::onprivate()
 void ChatClient::onoffline()
 {
 	/*下线*/
-	CPackge pgk(PT_PRIVATE, m_in,"");
+	CPackge pgk(PT_OFFLINE, m_in,"");
 	::sendto(m_sockClient, (char*)&pgk, sizeof(pgk), 0, (sockaddr*)&m_siServer, sizeof(m_siServer));
+
+	closesocket(m_sockClient);/*下线后关闭套接字*/
+	m_oerwordthread = false;
+
 }

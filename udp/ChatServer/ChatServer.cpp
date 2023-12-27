@@ -19,7 +19,7 @@ std::list<ClientInfo>g_lstCIs;
 
 int main()
 {
-	
+
 	/*创建套接字*/
 	SOCKET sckt = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (sckt == INVALID_SOCKET)
@@ -111,13 +111,13 @@ void OnLine(SOCKET sock, CPackge& pkg)
 	//保存登录的客户端列表
 	g_lstCIs.push_back(pkg.m_ci);
 	//通知其他客户端，有新客户端登录
-	CPackge pkgSend(PT_ONLINE,pkg.m_ci);
+	CPackge pkgSend(PT_ONLINE, pkg.m_ci);
 	for (auto& ci : g_lstCIs)
 	{
 		//发送给之前上线的客户端，现在有新上线了
 		sendto(sock, (char*)&pkgSend, sizeof(pkgSend), 0, (sockaddr*)&ci.m_si, sizeof(ci.m_si));
 	}
-	
+
 }
 
 
@@ -125,29 +125,16 @@ void OnLine(SOCKET sock, CPackge& pkg)
 void OffLine(SOCKET sock, CPackge& pkg)
 {
 	printf("[log]:%s %d %s offline\r\n", inet_ntoa(pkg.m_ci.m_si.sin_addr),
-											pkg.m_ci.m_si.sin_port,
-											pkg.m_ci.m_szName);
-	
-	for (auto i : g_lstCIs)
+		pkg.m_ci.m_si.sin_port,
+		pkg.m_ci.m_szName);
+
+	g_lstCIs.remove_if([&](const ClientInfo& item) {return pkg.m_ci == item; });/*删除下线的客户端*/
+
+	for (auto& ci : g_lstCIs)
 	{
-		if (i.m_si==pkg.m_ci.m_si)
-		{
-			
-		}
-
-
+		sendto(sock, (char*)&pkg, sizeof(pkg), 0, (sockaddr*)&ci.m_si, sizeof(ci.m_si));
 	}
-
-	////下线
-	//printf("[log]:%s %d %s offline\r\n", inet_ntoa(pkg.m_ci.m_si.sin_addr),
-	//	pkg.m_ci.m_si.sin_port,
-	//	pkg.m_ci.m_szName);
-	//g_lstCIs.remove(pkg.m_ci);
-	//CPackge pkgSend(PT_OFFLINE, pkg.m_ci);
-	//for (auto& ci : g_lstCIs)
-	//{
-	//	sendto(sock, (char*)&pkgSend, sizeof(pkgSend), 0, (sockaddr*)&ci.m_si, sizeof(ci.m_si));
-	//}
+	
 }
 
 

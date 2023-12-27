@@ -8,6 +8,32 @@ Q_DECLARE_METATYPE(CPackge)
 namespace Ui {
 class ChatClient;
 }
+
+class DataEventoffline :public QEvent
+{
+public:
+    static const QEvent::Type type = static_cast<QEvent::Type>(QEvent::User + 4);
+    explicit DataEventoffline(CPackge pck)
+        :QEvent(type), m_data(pck)
+    {
+    }
+    QString data()
+    {
+        return QString::fromUtf8(m_data.m_ci.m_szName);
+    }
+    CPackge getEventPck()
+    {
+        return m_data;
+    }
+    QString getmsg()
+    {
+        return QString::fromUtf8(m_data.m_szMsg);
+    }
+private:
+    CPackge m_data;
+};
+
+
 class DataEventPrivaet :public QEvent
 {
 public:
@@ -77,6 +103,9 @@ private:
 
 
 
+
+
+
 class ChatClient : public QWidget
 {
     Q_OBJECT
@@ -91,6 +120,7 @@ private:
     sockaddr_in m_siServer;//存储服务端的端口和地址
     ClientInfo m_in; 
     HANDLE m_hThread;//多线程接收数据
+    bool m_oerwordthread;/*退出线程*/
 private:
     void online();//上线
     void onpublic();//群聊
