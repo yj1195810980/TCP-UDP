@@ -3,6 +3,7 @@
 #include "../common/Proto.h"
 #include <QWidget>
 #include <QEvent>
+#include <QTimer>
 #pragma comment(lib,"Ws2_32.lib")
 Q_DECLARE_METATYPE(CPackge)
 namespace Ui {
@@ -19,7 +20,7 @@ public:
     }
     QString data()
     {
-        return QString::fromUtf8(m_data.m_ci.m_szName);
+        return QString::fromUtf8(m_data.m_client.m_szName);
     }
     CPackge getEventPck()
     {
@@ -44,7 +45,7 @@ public:
     }
     QString data()
     {
-        return QString::fromUtf8(m_data.m_ci.m_szName);
+        return QString::fromUtf8(m_data.m_client.m_szName);
     }
     CPackge getEventPck()
     {
@@ -67,7 +68,7 @@ public:
     }
     QString data()
     {
-       return QString::fromUtf8(m_data.m_ci.m_szName);
+       return QString::fromUtf8(m_data.m_client.m_szName);
     }
     CPackge getEventPck()
     {
@@ -118,7 +119,8 @@ private:
     Ui::ChatClient *ui;
     SOCKET m_sockClient;
     sockaddr_in m_siServer;//存储服务端的端口和地址
-    ClientInfo m_in; 
+    Client m_client; 
+    QTimer *m_timerp;//定时器
     HANDLE m_hThread;//多线程接收数据
     bool m_oerwordthread;/*退出线程*/
 private:
@@ -126,6 +128,7 @@ private:
     void onpublic();//群聊
     void onprivate();//私聊
     void onoffline();//下线
+    void onHeartBeat();
 
 private:
    static DWORD WINAPI WorkRecvThreadProc(LPVOID IpParameter);//由于获取数据会阻塞线程，所以这里使用开个新线程去获取服务端数据

@@ -9,7 +9,8 @@ enum packageType
 	PT_ONLINE,//上线
 	PT_OFFLINE,//下线
 	PT_PUBLIC,//群聊
-	PT_PRIVATE//私聊
+	PT_PRIVATE,//私聊
+	PT_HEARTBEAT//心跳包
 };
 
 
@@ -17,9 +18,9 @@ enum packageType
 /// <summary>
 /// 客户端信息
 /// </summary>
-struct ClientInfo
+struct Client
 {
-	bool operator==(const ClientInfo& obj)
+	bool operator==(const Client& obj)
 	{
 		if (m_si.sin_addr.S_un.S_addr!=obj.m_si.sin_addr.S_un.S_addr)
 		{
@@ -50,16 +51,16 @@ struct ClientInfo
 /// </summary>
 struct CPackge
 {
-	CPackge(packageType py, ClientInfo& ci, char* msg = nullptr)
-		:m_pt(py), m_ci(ci)
+	CPackge(packageType py, Client& client, char* msg = nullptr)
+		:m_pt(py), m_client(client)
 	{
 		if (msg != nullptr)
 		{
 			strcpy(m_szMsg, msg);
 		}
 	}
-	CPackge(packageType py, ClientInfo& ci,ClientInfo&ciDst, char* msg = nullptr)
-		:m_pt(py), m_ci(ci), m_ciDst(ciDst)
+	CPackge(packageType py, Client& ci,Client&ciDst, char* msg = nullptr)
+		:m_pt(py), m_client(ci), m_ciDst(ciDst)
 	{
 		if (msg != nullptr)
 		{
@@ -73,7 +74,7 @@ struct CPackge
 	}
 
 	packageType m_pt;//包类型
-	ClientInfo m_ci;//客户端信息
-	ClientInfo m_ciDst;//私聊客户端的信息
+	Client m_client;//客户端信息
+	Client m_ciDst;//私聊客户端的信息
 	char m_szMsg[MASLEN];//消息
 };

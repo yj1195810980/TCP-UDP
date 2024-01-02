@@ -42,9 +42,9 @@ ChatClient::ChatClient(QWidget* parent) :
 	sockaddr_in siself;
 	int nLen = sizeof(siself);
 	getsockname(m_sockClient, (sockaddr*)&siself, &nLen);
-	m_in.m_si.sin_family = AF_INET;
-	m_in.m_si.sin_port = siself.sin_port;
-	m_in.m_si.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
+	m_client.m_si.sin_family = AF_INET;
+	m_client.m_si.sin_port = siself.sin_port;
+	m_client.m_si.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
 
 	//启动工作线程(接收数据)
 	SECURITY_ATTRIBUTES se = {};
@@ -62,6 +62,8 @@ ChatClient::ChatClient(QWidget* parent) :
 	ui->pushButton_3->setEnabled(false);
 	ui->pushButton_4->setEnabled(false);
 
+	m_timerp = new QTimer(this);
+	connect(m_timerp, &QTimer::timeout, this, &ChatClient::onHeartBeat);
 }
 
 ChatClient::~ChatClient()
@@ -104,7 +106,7 @@ DWORD WINAPI ChatClient::WorkRecvThreadProc(LPVOID obj)
 			}
 			case PT_PUBLIC:
 			{
-				DataEventPublic* event = new DataEventPublic(pack.m_ci.m_szName, pack.m_szMsg);
+				DataEventPublic* event = new DataEventPublic(pack.m_client.m_szName, pack.m_szMsg);
 				QApplication::postEvent(th, event);
 				break;
 			}
@@ -124,6 +126,8 @@ DWORD WINAPI ChatClient::WorkRecvThreadProc(LPVOID obj)
 
 void ChatClient::online()
 {
+	m_timerp->start(1000);/*上线了就开始发心跳包*/
+
 	ui->pushButton_2->setEnabled(true);
 	ui->pushButton_3->setEnabled(true);
 	ui->pushButton_4->setEnabled(true);
@@ -139,10 +143,11 @@ void ChatClient::online()
 	QString name = ui->lineEdit->text();
 
 
-	strncpy(m_in.m_szName, name.toUtf8().constData(), sizeof(name.toUtf8().constData()));
-	m_in.m_szName[sizeof(m_in.m_szName) - 1] = '\0';
-	CPackge pgk(PT_ONLINE, m_in, "");
+	strncpy(m_client.m_szName, name.toUtf8().constData(), sizeof(name.toUtf8().constData()));
+	m_client.m_szName[sizeof(m_client.m_szName) - 1] = '\0';
+	CPackge pgk(PT_ONLINE, m_client, "");
 	::sendto(m_sockClient, (char*)&pgk, sizeof(pgk), 0, (sockaddr*)&m_siServer, sizeof(m_siServer));
+
 }
 
 
@@ -154,7 +159,7 @@ void ChatClient::onpublic()
 		return;
 	}
 	QString msgData = ui->lineEdit_2->text();
-	CPackge pgk(PT_PUBLIC, m_in, "");
+	CPackge pgk(PT_PUBLIC, m_client, "");
 
 	memset(pgk.m_szMsg, 0, sizeof(pgk.m_szMsg));
 
@@ -197,7 +202,7 @@ void ChatClient::customEvent(QEvent* event)
 		/*私聊消息*/
 		DataEventPrivaet* dataEvent = static_cast<DataEventPrivaet*>(event);
 		QString str;
-		QString formattedString = QString(u8"名称：%1，内容：%2").arg(dataEvent->getEventPck().m_ci.m_szName).arg(dataEvent->getmsg());
+		QString formattedString = QString(u8"名称：%1，内容：%2").arg(dataEvent->getEventPck().m_client.m_szName).arg(dataEvent->getmsg());
 		ui->textBrowser->append(formattedString);
 		break;
 	}
@@ -206,7 +211,7 @@ void ChatClient::customEvent(QEvent* event)
 		/*收到的其他客户端下线的消息*/
 		DataEventoffline* dataEvent = static_cast<DataEventoffline*>(event);
 		QString str;
-		QString formattedString = QString(u8"名称：%1，已下线").arg(dataEvent->getEventPck().m_ci.m_szName);
+		QString formattedString = QString(u8"名称：%1，已下线").arg(dataEvent->getEventPck().m_client.m_szName);
 		ui->textBrowser->append(formattedString);
 
 		for (int i = 0; i < ui->listWidget->count(); i++)
@@ -216,7 +221,7 @@ void ChatClient::customEvent(QEvent* event)
 			if (stredData.isValid())
 			{
 				auto pck = stredData.value<CPackge>();
-				if (pck.m_ci == dataEvent->getEventPck().m_ci)
+				if (pck.m_client == dataEvent->getEventPck().m_client)
 				{
 					ui->listWidget->takeItem(i);
 					delete temp;
@@ -247,7 +252,7 @@ void ChatClient::onprivate()
 			auto pck = stredData.value<CPackge>();
 			QString msgData = ui->lineEdit_2->text();
 			auto ms = curritem->text();
-			CPackge pgk(PT_PRIVATE, m_in, pck.m_ci, "");
+			CPackge pgk(PT_PRIVATE, m_client, pck.m_client, "");
 
 			memset(pgk.m_szMsg, 0, sizeof(pgk.m_szMsg));
 			int copyLength = qMin(msgData.toUtf8().size(), static_cast<int>(sizeof(pgk.m_szMsg)) - 1);
@@ -263,13 +268,14 @@ void ChatClient::onprivate()
 
 void ChatClient::onoffline()
 {
+	
 	ui->pushButton_2->setEnabled(false);
 	ui->pushButton_3->setEnabled(false);
 	ui->pushButton_4->setEnabled(false);
 	ui->pushButton->setEnabled(true);
 
 	/*下线*/
-	CPackge pgk(PT_OFFLINE, m_in, "");
+	CPackge pgk(PT_OFFLINE, m_client, "");
 	::sendto(m_sockClient, (char*)&pgk, sizeof(pgk), 0, (sockaddr*)&m_siServer, sizeof(m_siServer));
 
 	closesocket(m_sockClient);/*下线后关闭套接字*/
@@ -278,11 +284,18 @@ void ChatClient::onoffline()
 	/*清空在线列表*/
 	for (int i = 0; i < ui->listWidget->count(); ++i)
 	{
-		auto item=ui->listWidget->item(i);
+		auto item = ui->listWidget->item(i);
 		ui->listWidget->takeItem(i);
 		delete item;
 	}
 	ui->listWidget->clear();
+	m_timerp->stop();/*停止发送心跳包*/
+}
 
+void ChatClient::onHeartBeat()
+{
+	/*心跳包发送*/
+	CPackge pgk(PT_HEARTBEAT, m_client);
+	::sendto(m_sockClient, (char*)&pgk, sizeof(pgk), 0, (sockaddr*)&m_siServer, sizeof(m_siServer));
 
 }
