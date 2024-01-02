@@ -7,7 +7,9 @@
 #include <WinSock2.h>
 #include <ws2tcpip.h>
 #include <time.h>
+#include "CLock.h"
 using namespace std;
+
 
 
 struct CClientInfo
@@ -27,6 +29,7 @@ void OnHearBeat(SOCKET sock, CPackge& pkg);
 
 //存储所有上线的客户端
 std::list<CClientInfo>g_lstCIs;
+CLock g_lockCls;
 
 /*心跳包检测线程*/
 DWORD WINAPI CheckHeartBeatThreadFunc(LPVOID obj)
@@ -36,6 +39,7 @@ DWORD WINAPI CheckHeartBeatThreadFunc(LPVOID obj)
 	while (true)
 	{
 		time_t tmCurrent = time(NULL);/*获取当前时间*/
+		g_lockCls.Lock();
 		for (auto it = g_lstCIs.begin(); it != g_lstCIs.end(); ++it)
 		{
 			printf("[log]:%s %d %s upEartBeatData\r\n", inet_ntoa(it->m_client.m_si.sin_addr),
@@ -49,9 +53,8 @@ DWORD WINAPI CheckHeartBeatThreadFunc(LPVOID obj)
 				break;
 			}
 		}
-
+		g_lockCls.Unlock();
 	}
-
 	return 0;
 }
 
@@ -153,7 +156,7 @@ void OnLine(SOCKET sock, CPackge& pkg)
 	printf("[log]:%s %d %s online\r\n", inet_ntoa(pkg.m_client.m_si.sin_addr),
 		pkg.m_client.m_si.sin_port,
 		pkg.m_client.m_szName);
-
+	g_lockCls.Lock();
 	for (auto& ci : g_lstCIs)
 	{
 		CPackge pkgSend(PT_ONLINE, ci.m_client);
@@ -172,12 +175,14 @@ void OnLine(SOCKET sock, CPackge& pkg)
 		//发送给之前上线的客户端，现在有新上线了
 		sendto(sock, (char*)&pkgSend, sizeof(pkgSend), 0, (sockaddr*)&ci.m_client.m_si, sizeof(ci.m_client.m_si));
 	}
+	g_lockCls.Unlock();
 }
 
 
 
 void OffLine(SOCKET sock, CPackge& pkg)
 {
+	g_lockCls.Lock();
 	printf("[log]:%s %d %s offline\r\n", inet_ntoa(pkg.m_client.m_si.sin_addr),
 		pkg.m_client.m_si.sin_port,
 		pkg.m_client.m_szName);
@@ -188,21 +193,24 @@ void OffLine(SOCKET sock, CPackge& pkg)
 	{
 		sendto(sock, (char*)&pkg, sizeof(pkg), 0, (sockaddr*)&ci.m_client.m_si, sizeof(ci.m_client.m_si));
 	}
-
+	g_lockCls.Unlock();
 }
 
 
 void OnPublic(SOCKET sock, CPackge& pkg)
 {
+	g_lockCls.Lock();
 	//群发
 	for (auto& ci : g_lstCIs)
 	{
 		sendto(sock, (char*)&pkg, sizeof(pkg), 0, (sockaddr*)&ci.m_client.m_si, sizeof(ci.m_client.m_si));
 	}
+	g_lockCls.Unlock();
 }
 
 void OnHearBeat(SOCKET sock, CPackge& pkg)
 {
+	g_lockCls.Lock();
 	/*使用心跳包更新心跳时间*/
 	/*后续可能会修改list为map，提高效率*/
 	for (auto& it : g_lstCIs)
@@ -213,7 +221,7 @@ void OnHearBeat(SOCKET sock, CPackge& pkg)
 			break;
 		}
 	}
-
+	g_lockCls.Unlock();
 }
 
 
