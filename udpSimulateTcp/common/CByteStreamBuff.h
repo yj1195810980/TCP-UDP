@@ -1,4 +1,5 @@
 #pragma once
+#include<windows.h>
 #include<vector>
 using namespace std;
 
@@ -14,14 +15,14 @@ public:
 	/// </summary>
 	/// <param name="pBuff"></param>
 	/// <param name="nSize"></param>
-	void Write(const char* pBuff, int nSize);
+	void Write(LPBYTE pBuff, int nSize);
 
 	/// <summary>
 	/// 从缓冲区读指定字节数，读取的数据自动从缓冲区删除
 	/// </summary>
 	/// <param name="pBuff"></param>
 	/// <param name="nSize"></param>
-	void Read(char* pBuff, int nSize);
+	void Read(LPBYTE pBuff, int nSize);
 
 
 	/// <summary>
@@ -39,5 +40,5 @@ public:
 
 private:
 	
-	vector<char>m_vctBuff;
+	vector<BYTE>m_vctBuff;
 };

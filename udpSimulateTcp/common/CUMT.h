@@ -93,24 +93,27 @@ private:
 		BYTE m_aryData[DATALEN];//承载数据
 	};
 #pragma pack(pop)
+	const ULONGLONG m_tmElapse = 100;//超时的时间
 	struct CPackageInfo
 	{
 		CPackageInfo() {};
-		CPackageInfo(time_t tm, CPackage pkg) :m_tmLastTime(tm), m_pkg(pkg)
+		CPackageInfo(ULONGLONG tm, CPackage pkg) :m_tmLastTime(tm), m_pkg(pkg)
 		{
 
 		}
-		time_t m_tmLastTime;//时间
+		ULONGLONG m_tmLastTime;//时间
 		CPackage m_pkg;
 	};
 #pragma endregion 
 private:
 	VOID Clear();
 	BOOL Init();
+	VOID Log(const char* szFmt, ...);
 private:
 	SOCKET m_sock;
-	sockaddr_in m_siClient = {};
-	sockaddr_in m_siService = {};
+
+	sockaddr_in m_siDst = {};//对方的地址
+	sockaddr_in m_siSrc = {};//自己的地址
 	
 private:
 	DWORD m_nNextSendSeq = 0;//下一次拆包的开始序号

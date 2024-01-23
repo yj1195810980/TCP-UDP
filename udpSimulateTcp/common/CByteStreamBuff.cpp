@@ -8,7 +8,7 @@ CByteStreamBuff::~CByteStreamBuff()
 {
 }
 
-void CByteStreamBuff::Write(const char* pBuff, int nSize)
+void CByteStreamBuff::Write(LPBYTE pBuff, int nSize)
 {
 	for (int i = 0; i < nSize; ++i)
 	{
@@ -16,7 +16,7 @@ void CByteStreamBuff::Write(const char* pBuff, int nSize)
 	}
 }
 
-void CByteStreamBuff::Read(char* pBuff, int nSize)
+void CByteStreamBuff::Read(LPBYTE pBuff, int nSize)
 {
 	memcpy(pBuff, m_vctBuff.data(), nSize);
 	auto itrBegin = m_vctBuff.begin();
