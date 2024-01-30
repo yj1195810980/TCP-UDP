@@ -93,7 +93,7 @@ private:
 		BYTE m_aryData[DATALEN];//承载数据
 	};
 #pragma pack(pop)
-	const ULONGLONG m_tmElapse = 100;//超时的时间
+	const ULONGLONG m_tmElapse = 500;//超时的时间
 	struct CPackageInfo
 	{
 		CPackageInfo() {};

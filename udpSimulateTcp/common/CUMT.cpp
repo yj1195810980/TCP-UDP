@@ -212,6 +212,14 @@ BOOL CUMT::Init()
 		Clear();
 		return false;
 	}
+
+	//开2个收包线程
+	m_RecvThread = CreateThread(NULL, 0, RecvThread, this, 0, NULL);
+	if (m_RecvThread == NULL)
+	{
+		Clear();
+		return false;
+	}
 	m_RecvThread = CreateThread(NULL, 0, RecvThread, this, 0, NULL);
 	if (m_RecvThread == NULL)
 	{
@@ -249,8 +257,20 @@ DWORD CUMT::SnedThread(LPVOID IpParam)
 			//发送没有发出去的包
 			//重发超时的包
 			//没有发送的包时间为0他也算做超时的，反正都是需要重发
+			ULONGLONG tmCurrent = GetTickCount64();
 			if ((tmCurrent - pi.second.m_tmLastTime) > pThis->m_tmElapse)//当前时间减去发送的时间大于规定时间则发送
 			{
+				if (pi.second.m_tmLastTime == 0)
+				{
+					//输出首次包日志
+					pThis->Log("[umt]:package ==>first  net  seq:%d", pi.second.m_pkg.m_nSeq);
+				}
+				else
+				{
+					//输出超时包日志
+					pThis->Log("[umt]:package ==>timeout net seq:%d", pi.second.m_pkg.m_nSeq);
+				}
+
 				sendto(pThis->m_sock,
 					(char*)&pi.second.m_pkg,
 					sizeof(pi.second.m_pkg),
@@ -258,11 +278,13 @@ DWORD CUMT::SnedThread(LPVOID IpParam)
 					(sockaddr*)&pThis->m_siDst,
 					sizeof(pThis->m_siDst));
 				pi.second.m_tmLastTime = tmCurrent;//更新时间
-				pThis->Log("[umt]:package ==> net seq:%d", pi.second.m_pkg.m_nSeq);
 			}
-
 		}
 		pThis->m_lckForSendMp.Unlock();
+
+		//切出线程
+		Sleep(1);
+
 	}
 	return 0;
 }

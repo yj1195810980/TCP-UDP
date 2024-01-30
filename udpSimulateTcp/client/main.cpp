@@ -30,7 +30,7 @@ int main(int argn, char** argc) {
 		DWORD dwBytesRead = 0;
 		::ReadFile(hFile, pBuff, 0x10000, &dwBytesRead,NULL);
 		umt.Send(pBuff, dwBytesRead);
-		dwBytesRead += dwBytesRead;
+		dwBytesSend += dwBytesRead;
 	}
 	CloseHandle(hFile);
 
