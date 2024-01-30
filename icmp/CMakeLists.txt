@@ -9,5 +9,8 @@ add_executable(${PROJECT_NAME}
         CSockinit.h
         CSockinit.cpp
         main.cpp
+        SendICMP.cpp
+        SendICMP.h
+
 )
 
