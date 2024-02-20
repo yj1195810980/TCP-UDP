@@ -62,6 +62,8 @@ unsigned short icmp_calc_checksum(char* icmp_packet, int size)
 }
 int main() {
 
+
+
 	/**
 	 * AF_INET 类型
 	 * SOCK_DGRAM 数据报
@@ -91,7 +93,13 @@ int main() {
 	sockaddr_in si;
 	si.sin_family = AF_INET;
 	si.sin_port = 0; //在网络层没有端口的概念，对面应该是直接到网卡
-	si.sin_addr.S_un.S_addr = inet_addr("101.226.4.6");
+
+    hostent *remoteHost;
+    //获取解析域名
+    remoteHost = gethostbyname("www.baidu.com");
+
+    si.sin_addr.S_un.S_addr = *(u_long *) remoteHost->h_addr_list[0];
+   //si.sin_addr.S_un.S_addr = inet_addr("101.226.4.6");
 
 
 	sendto(sock, (char*)&icmp, sizeof(icmp), 0, (sockaddr*)&si, sizeof(si));
